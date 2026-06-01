@@ -25,7 +25,7 @@ sudo bash setup-virtual-monitor.sh uninstall
 |------|-------------|
 | `setup-virtual-monitor.sh` | Install/uninstall script |
 | `generate-edid.py` | EDID generator (CVT-RB) |
-| `example.txt` | Original manual guide reference |
+| `prompt.txt` | Original manual guide reference |
 
 ## How it works
 

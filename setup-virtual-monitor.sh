@@ -45,6 +45,42 @@ detect_connector() {
     die "No DP or HDMI connector found on card0"
 }
 
+# ---- initramfs ---------------------------------------------------------
+INITRAMFS_HOOK="/etc/initramfs-tools/hooks/edid"
+
+update_initramfs() {
+    local hook_content
+    hook_content='#!/bin/sh
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in
+    prereqs) prereqs; exit 0;;
+esac
+. /usr/share/initramfs-tools/hook-functions
+for f in /lib/firmware/edid/*.bin; do
+    [ -f "$f" ] || continue
+    mkdir -p "${DESTDIR}/lib/firmware/edid"
+    cp "$f" "${DESTDIR}/lib/firmware/edid/"
+done
+'
+    if [[ "$1" == "install" ]]; then
+        echo "$hook_content" > "$INITRAMFS_HOOK"
+        chmod +x "$INITRAMFS_HOOK"
+        ok "Created initramfs hook: ${INITRAMFS_HOOK}"
+    fi
+
+    info "Updating initramfs to include EDID firmware..."
+    update-initramfs -u -k all || die "update-initramfs failed"
+    ok "Initramfs updated"
+}
+
+remove_initramfs() {
+    if [[ -f "$INITRAMFS_HOOK" ]]; then
+        rm -f "$INITRAMFS_HOOK"
+        ok "Removed initramfs hook: ${INITRAMFS_HOOK}"
+    fi
+}
+
 # ---- EDID generation --------------------------------------------------
 generate_edid() {
     info "Generating ${RES_W}x${RES_H}@${REFRESH} EDID..."
@@ -113,6 +149,7 @@ install() {
 
     generate_edid
     install_grub
+    update_initramfs install
 
     echo ""
     ok "Installation complete! Reboot to activate."
@@ -135,6 +172,8 @@ uninstall() {
     fi
 
     uninstall_grub
+    remove_initramfs
+    update_initramfs
 
     echo ""
     ok "Uninstall complete. Reboot to remove the virtual display."

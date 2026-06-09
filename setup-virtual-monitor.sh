@@ -32,15 +32,17 @@ check_root() { [[ $EUID -eq 0 ]] || die "Please run as root (sudo $0)"; }
 
 detect_connector() {
     local card base
-    for card in /sys/class/drm/card0-HDMI-*/; do
-        base="${card%/}"; base="${base##*/card0-}"
-        [[ -n "$base" ]] && { CONNECTOR="$base"; return 0; }
-    done
     for card in /sys/class/drm/card0-DP-*/; do
+        [[ -d "$card" ]] || continue
         base="${card%/}"; base="${base##*/card0-}"
         [[ -n "$base" ]] && { CONNECTOR="$base"; return 0; }
     done
-    die "No HDMI or DP connector found on card0"
+    for card in /sys/class/drm/card0-HDMI-*/; do
+        [[ -d "$card" ]] || continue
+        base="${card%/}"; base="${base##*/card0-}"
+        [[ -n "$base" ]] && { CONNECTOR="$base"; return 0; }
+    done
+    die "No DP or HDMI connector found on card0"
 }
 
 # ---- EDID generation --------------------------------------------------
@@ -156,7 +158,7 @@ Options:
 
 Examples:
   sudo bash $0 install
-  sudo bash $0 install -r 2560x1440 -R 75
+  sudo bash $0 install -c DP-1 -r 2560x1440 -R 75
   sudo bash $0 install -c HDMI-A-1 -r 3840x2160 -R 30
   sudo bash $0 uninstall
 EOF
